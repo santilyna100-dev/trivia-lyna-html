@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Trivia - Lyna</title>
+<style>
+  :root{--bg:#1b0b2a;--card:#fff;--accent:#7c3aed}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,#2b0f3c 0%, #120617 100%);color:#111}
+  .container{max-width:900px;margin:28px auto;padding:18px}
+  .card{background:rgba(255,255,255,0.05);backdrop-filter:blur(6px);border-radius:14px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,0.5);color:#fff}
+  .header{display:flex;gap:12px;align-items:center;justify-content:space-between}
+  .title{font-size:22px;font-weight:700}
+  .subtitle{font-size:13px;color:#e6d8ff}
+  .cover{height:220px;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#000;margin:16px 0}
+  .cover img{width:100%;height:100%;object-fit:cover}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  button{background:var(--accent);color:white;border:0;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.12)}
+  .lifebar{height:18px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;margin:10px 0}
+  .life{height:100%;background:linear-gradient(90deg,#ff6565,#ffb86b);width:100%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#1b0b1a}
+  .qwrap{display:grid;grid-template-columns:1fr 300px;gap:16px;margin-top:12px}
+  .question{font-size:18px;font-weight:700}
+  .options{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .opt{background:rgba(255,255,255,0.06);padding:10px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+  .opt.selected{outline:2px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.09)}
+  .qimg{border-radius:10px;height:260px;overflow:hidden;background:#000}
+  .qimg img{width:100%;height:100%;object-fit:cover}
+  .footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+  .small{font-size:13px;color:#ddd}
+  .result{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.9));z-index:40}
+  .result .panel{background:var(--card);color:#111;padding:28px;border-radius:14px;min-width:320px;text-align:center}
+  .correct{background:#e6fff0;color:#065a3b;border-radius:8px;padding:10px;margin:8px 0}
+  .wrong{background:#ffe9e9;color:#7a1a1a;border-radius:8px;padding:10px;margin:8px 0}
+  .edit-area{margin-top:12px;background:rgba(255,255,255,0.03);padding:12px;border-radius:10px}
+  label{display:flex;gap:8px;align-items:center}
+  select{padding:6px;border-radius:8px}
+  .meta{display:flex;gap:8px;align-items:center}
+  @media (max-width:900px){ .qwrap{grid-template-columns:1fr; } .qimg{height:220px} }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <div class="header">
+      <div>
+        <div class="title">Trivia: Lyna</div>
+        <div class="subtitle">Responde correctamente. Tienes 10 vidas. Cada error -1 vida. ¡Suerte!</div>
+      </div>
+      <div class="meta">
+        <button id="editBtn" class="ghost">Editar respuestas</button>
+        <button id="startBtn">Iniciar juego</button>
+      </div>
+    </div>
+
+    <div id="coverArea" class="cover" style="margin-top:14px;">
+      <!-- cover image -->
+    </div>
+
+    <div style="margin-top:10px">
+      <div class="lifebar" title="Vidas restantes">
+        <div id="lifeInner" class="life">10 / 10</div>
+      </div>
+    </div>
+
+    <div id="gameArea" style="display:none">
+      <div class="card" style="padding:14px">
+        <div class="qwrap">
+          <div>
+            <div id="qText" class="question">Pregunta ...</div>
+            <div class="options" id="options"></div>
+            <div style="margin-top:12px;display:flex;gap:8px">
+              <button id="submitBtn">Enviar respuesta</button>
+              <button id="nextBtn" class="ghost" style="display:none">Siguiente</button>
+            </div>
+            <div id="feedback" style="margin-top:10px"></div>
+          </div>
+          <div>
+            <div class="qimg" id="qImage"><img src="" alt="Imagen pregunta" /></div>
+            <div style="margin-top:10px;display:flex;gap:8px;align-items:center;justify-content:space-between">
+              <div class="small" id="progress">Pregunta 1 / 100</div>
+              <div class="small">Vidas: <span id="livesCount">10</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="editArea" style="display:none" class="edit-area">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label>Pregunta:
+          <select id="editQuestionSelect"></select>
+        </label>
+        <label>Respuesta correcta:
+          <select id="editCorrectSelect">
+            <option value="0">a)</option>
+            <option value="1">b)</option>
+            <option value="2">c)</option>
+            <option value="3">d)</option>
+          </select>
+        </label>
+        <button id="saveCorrectBtn">Guardar</button>
+        <button id="closeEditBtn" class="ghost">Cerrar edición</button>
+      </div>
+      <div style="margin-top:10px;font-size:13px;color:#ddd">
+        Nota: por defecto dejé la opción <strong>a)</strong> marcada como correcta en todas las preguntas. Cámbiala aquí si sabes cuál es la correcta.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Resultado / Game Over -->
+<div id="result" class="result">
+  <div class="panel" id="resultPanel">
+    <h2 id="resultTitle">Game Over</h2>
+    <p id="resultMsg">Te quedaste sin vidas.</p>
+    <div style="margin-top:12px">
+      <button id="retryBtn">Volver a intentar</button>
+      <button id="exitBtn" class="ghost">Volver a la portada</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===============================
+   Datos: imágenes y preguntas
+   =============================== */
+
+// Imágenes que enviaste (usadas tal cual)
+const images = [
+  "https://tse4.mm.bing.net/th/id/OIP.Lk4lWBOaRJymMN_VvlmLwwHaNK?pid=ImgDet&w=188&h=333&c=7&dpr=1,2&o=7&rm=3",
+  "https://tse2.mm.bing.net/th/id/OIP.HXxkyKy41pgCNKcKhnSQXAHaNK?pid=ImgDet&w=188&h=333&c=7&dpr=1,2&o=7&rm=3",
+  "https://tse4.mm.bing.net/th/id/OIP.e8Hpu2Tc2H_s5ZkklkO4dgHaNK?pid=ImgDet&w=188&h=333&c=7&dpr=1,2&o=7&rm=3",
+  "https://th.bing.com/th/id/OIP.py69-zDMoDwhD6u_LlclIgHaEK?w=320&h=180&c=7&r=0&o=7&dpr=1.2&pid=1.7&rm=3",
+  "https://th.bing.com/th/id/OIP.IEM0dZcoXrQCYr-iJwcG7wHaEK?w=286&h=180&c=7&r=0&o=7&dpr=1.2&pid=1.7&rm=3",
+  "https://th.bing.com/th/id/OIP.OF5GiQi_Q0TE0uVhrr0dCgHaI1?w=135&h=180&c=7&r=0&o=7&dpr=1.2&pid=1.7&rm=3",
+  "https://th.bing.com/th/id/OIP.vRQ8V9Mr3RFfDOpEPTlBfgHaHb?w=182&h=184&c=7&r=0&o=7&dpr=1.2&pid=1.7&rm=3",
+  "https://th.bing.com/th/id/OIP.pO_OkYTPQrP9ZsHo1uSauAHaHa?w=175&h=186&c=7&r=0&o=7&dpr=1.2&pid=1.7&rm=3",
+  "https://th.bing.com/th/id/OIP.djnsz2eEF9hkQB4ZkZzH_AHaNL?w=115&h=185&c=7&r=0&o=7&dpr=1.2&pid=1.7&rm=3",
+  "https://th.bing.com/th/id/OIP.I91yRSJTD5GTL05_Edq_jwHaEK?w=297&h=180&c=7&r=0&o=7&dpr=1.2&pid=1.7&rm=3",
+  "https://th.bing.com/th/id/OIP.M0ZyPCaXCooK3xLVQysRpQHaJ4?w=132&h=180&c=7&r=0&o=7&dpr=1.2&pid=1.7&rm=3",
+  "https://tse2.mm.bing.net/th/id/OIP.YTB6FPmPuPcoQuRMSNtjXgHaHV?pid=ImgDet&w=193&h=191&c=7&dpr=1,2&o=7&rm=3",
+  "https://tse1.mm.bing.net/th/id/OIP.mHT2PJtU0AvMuCko77J9vAHaHY?pid=ImgDet&w=193&h=191&c=7&dpr=1,2&o=7&rm=3",
+  "https://tse2.mm.bing.net/th/id/OIP.VqFUAxXVEsx0Z-7tF53GrgHaG6?pid=ImgDet&w=193&h=180&c=7&dpr=1,2&o=7&rm=3",
+  "https://tse3.mm.bing.net/th/id/OIP.ZalOQp6fBGwxj2XkeAB85AHaNK?pid=ImgDet&w=188&h=333&c=7&dpr=1,2&o=7&rm=3",
+  "https://tse1.mm.bing.net/th/id/OIP.nnDATIVVVpx5HhK9JWXVawHaNK?pid=ImgDet&w=188&h=333&c=7&dpr=1,2&o=7&rm=3"
+];
+
+// Preguntas (copiadas tal como las enviaste):
+// Nota: correctIndex inicial = 0 (a) por defecto; puedes editarlo en el modo edición.
+const questions = [
+  { q: "¿Cuál es el nombre real de Lyna Vallejos?", opts:["Laura Vallejos","Luciana Vallejos","Evelyn Vallejos","Elena Vallejos"], correctIndex:0 },
+  { q: "¿En qué país nació Lyna Vallejos?", opts:["España","México","Colombia","Argentina"], correctIndex:3 },
+  { q: "¿Cuál es la fecha de nacimiento de Lyna?", opts:["18 de abril de 1995","18 de marzo de 1994","25 de mayo de 1993","1 de enero de 1992"], correctIndex:0 },
+  { q: "¿Cuál fue el primer videojuego que Lyna comenzó a subir a YouTube?", opts:["Roblox","Minecraft","Los Sims","Among Us"], correctIndex:0 },
+  { q: "¿Cuál es el nombre de su esposo?", opts:["Mario Morro","Pablo Morro","Dani Morro","Lucas Morro"], correctIndex:2 },
+  { q: "¿Qué carrera universitaria estudió Lyna?", opts:["Administración de Empresas","Diseño Gráfico","Periodismo","Derecho"], correctIndex:0 },
+  { q: "¿Cuál de los siguientes videojuegos es uno de los principales en su contenido?", opts:["Fortnite","League of Legends","Roblox","Call of Duty"], correctIndex:2 },
+  { q: "¿Cómo se llama su serie de libros más famosa?", opts:["Los Viajes de Lyna","El Mundo Gamer","Una familia anormal","Aventuras con Lyna"], correctIndex:2 },
+  { q: "¿Cuál de sus canales se centra más en Vlogs, viajes y su vida personal (antes llamado Lyna Vlogs)?", opts:["Lyna","Lyna Music","Lyna Vallejos","Lyniel"], correctIndex:0 },
+  { q: "Lyna es considerada la youtuber femenina de Argentina con la mayor cantidad de...", opts:["Videos subidos","Libros publicados","Suscriptores","Colaboraciones"], correctIndex:2 },
+  { q: "¿Cómo se llama el espectáculo teatral que Lyna y Dani han presentado?", opts:["Lyna y Dani en vivo","La Aventura Anormal","El Show de los Gamers","Show Lyniel"], correctIndex:1 },
+  { q: "¿En qué ciudad de la Provincia de Buenos Aires nació Lyna?", opts:["La Plata","Morón","Córdoba","Rosario"], correctIndex:0 },
+  { q: "¿Cuál es el nombre de su canal de música?", opts:["La voz de Lyna","Canciones Gamer","Lyna Music","Evelyn Canta"], correctIndex:2 },
+  { q: "Además de youtuber, Lyna también es...", opts:["Cocinera profesional","Arquitecta","Escritora","Diseñadora de modas"], correctIndex:2 },
+  { q: "¿Con qué famosa editorial ha colaborado Lyna para publicar sus libros?", opts:["Planeta","SM","Santillana","Penguin Random House"], correctIndex:1 },
+  { q: "¿En qué año creó Lyna su canal principal de YouTube (\"Lyna\")?", opts:["2012","2016","2014","2018"], correctIndex:0 },
+  { q: "¿En qué otro país ha vivido Lyna además de Argentina, donde reside su esposo Dani?", opts:["Estados Unidos","México","Chile","España"], correctIndex:3 },
+  { q: "¿Qué género de videojuegos es el principal en su canal \"Lyna\"?", opts:["Estrategia","Deportes","Disparos","Sandbox/Roleplay"], correctIndex:3 },
+  { q: "¿Qué juego de rol y construcción Lyna juega frecuentemente además de Roblox?", opts:["Fornite","Free Fire","Minecraft","Call of Duty"], correctIndex:2 },
+  { q: "¿Cómo se llama el canal que Lyna comparte con Dani, su esposo?", opts:["DaniLyna","Los Morro","Lyniel","Pareja Gamer"], correctIndex:2 },
+  { q: "¿En qué evento internacional conoció Lyna a Dani Morro?", opts:["Comic-Con","VidCon","Gamescom","E3"], correctIndex:1 },
+  { q: "¿Cuál de las siguientes canciones es una de las más conocidas de Lyna Music?", opts:["Despacito","El pollito Pío","Loca Enamorada","Baby Shark"], correctIndex:2 },
+  { q: "¿Qué objeto inanimado (peluche) es un personaje recurrente en su contenido?", opts:["El Conejo Saltarín","La Abuela Rita","El Señor Pato","El Gusano Willy"], correctIndex:2 },
+  { q: "¿A qué público está principalmente dirigido el contenido de Lyna?", opts:["Adultos mayores","Adolescentes","Infantil y juvenil","Universitarios"], correctIndex:2 },
+  { q: "¿Qué hacía Lyna en sus inicios antes de enfocarse por completo en gameplays?", opts:["Entrevistas a famosos","Tutoriales de maquillaje","Vlogs de viajes","Críticas de cine"], correctIndex:2 },
+  { q: "¿Cómo se llama la hermana de Lyna que aparece en sus videos y ayuda con la ilustración de sus libros?", opts:["Marina","Melina","Lucía","Emilia"], correctIndex:1 },
+  { q: "¿Cuál es el nombre de su alter ego malvado o versión oscura que aparece en historias de terror?", opts:["Lyna Malvada","Lyna.exe","Lyna Sombra","Lyna Oscura"], correctIndex:1 },
+  { q: "¿Qué mensaje social y de valores ha promovido activamente Lyna en sus plataformas?", opts:["La importancia de la tecnología","Concientización contra el bullying y aceptación","Estudiar para ser youtuber","Viajar por todo el mundo"], correctIndex:1 },
+  { q: "¿Qué famosa serie de libros juvenil ha sido coescrita y co-diseñada por Lyna?", opts:["Harry Potter","Una familia anormal","Diario de Greg","Cuentos de buenas noches para niñas rebeldes"], correctIndex:1 },
+  { q: "¿En qué año se publicó el primer libro de Una familia anormal?", opts:["2017","2018","2019","2020"], correctIndex:1 },
+  { q: "¿Cómo se llama su canal para contenido en inglés (actualmente no activo/disponible)?", opts:["Lyna English","Lyna International","I am Lina","Lyna Worldwide"], correctIndex:0 },
+  { q: "¿Qué personaje recurrente está basado en la abuela de Lyna y es parte de Una familia anormal?", opts:["Melina","Dani Morro","Abuela Rita","El Señor Pato"], correctIndex:2 },
+  { q: "¿Qué tipo de vídeo musical viralizó Lyna en 2017?", opts:["Desafío de baile","Parodia de canciones","Roast Yourself Challenge","Canción de cuna"], correctIndex:2 },
+  { q: "¿Cuál de las siguientes no es una plataforma de redes sociales principal de Lyna?", opts:["Instagram","Twitter (X)","TikTok","LinkedIn"], correctIndex:3 },
+  { q: "¿En qué popular juego de Roblox Lyna a menudo juega a ser madre adoptiva de mascotas?", opts:["Murder Mystery 2","Jailbreak","Adopt Me!","Brookhaven"], correctIndex:2 },
+  { q: "¿En qué ciudad de España reside Lyna parte del tiempo?", opts:["Madrid","Barcelona","Sevilla","Palma"], correctIndex:0 },
+  { q: "¿Qué nombre utiliza la hermana de Dani Morro, quien colabora con frecuencia con Lyna en vídeos?", opts:["Lima","Nela","Mandarina","Chocoblox"], correctIndex:3 },
+  { q: "¿Cuál es la profesión del padre de Lyna, mencionada en entrevistas?", opts:["Profesor","Policía","Camionero","Médico"], correctIndex:0 },
+  { q: "¿Qué hace la madre de Lyna, Elizabeth, según entrevistas?", opts:["Diseñadora de modas","Empleada en un neuropsiquiátrico","Cocinera profesional","Abogada"], correctIndex:1 },
+  { q: "¿Qué hace Lyna en su canal \"Lyna y sus Juguetes\" (o similar)?", opts:["Experimentos científicos","Unboxing y juegos con muñecas y juguetes","Tutoriales de maquillaje","Críticas de cine"], correctIndex:1 },
+  { q: "¿Cuál es el nombre de la hurona de Lyna, una de sus mascotas reales?", opts:["Pulí","Mila","Umi","Mora"], correctIndex:2 },
+  { q: "¿Cuál de estos NO es uno de los títulos de la saga Una familia anormal?", opts:["El Misterio de la Hechicera","En busca del tesoro de Minuca","Y el cruce de los universos","Y el portal a otra dimensión"], correctIndex:3 },
+  { q: "¿Qué tipo de mascota real tiene Lyna además de la hurona Umi?", opts:["Perro","Conejo","Pez","Gatos (Pulí, Mila y Mora son algunos)"], correctIndex:3 },
+  { q: "¿Qué tipo de contenido dejó de subir temporalmente en 2018 para centrarse en Roblox y otras series?", opts:["Vlogs de viajes","Los Sims 4","Minecraft Roleplay","Canciones"], correctIndex:1 },
+  { q: "¿Qué título de libro de Lyna permite al lector elegir el curso de la historia?", opts:["Una familia anormal. Y la capa superpoderosa","Una familia anormal. En busca del tesoro de Minuca","Las Aventuras de Lyna y Dani: Elige tu Historia","El diario de la abuela Rita"], correctIndex:0 },
+  { q: "¿En qué año se creó el canal de su esposo, Dani Morro, que a menudo colabora con ella?", opts:["2012","2015","2018","2020"], correctIndex:1 },
+  { q: "¿Cuál de sus gatos machos es conocido por su nombre de \"Señor Gato\" o \"Gato-Persona\"?", opts:["Umi","Mila","Puchín","Mora"], correctIndex:2 },
+  { q: "¿Qué tipo de vehículo es la profesión del padre de Lyna, que se menciona en su biografía?", opts:["Taxi","Autobús","Camión","Tren"], correctIndex:2 },
+  { q: "¿Qué popular juego de Roblox incluye la creación de casas y ciudades y ha sido parte de su contenido?", opts:["Adopt Me!","Anime Fighting Simulator","Blox Fruits","Pet Simulator X"], correctIndex:0 },
+  { q: "¿Qué nombre artístico utiliza el novio de su hermana Melina, quien a veces colabora en vídeos?", opts:["Fede","Kevin","Chocoblox","Peluche"], correctIndex:2 },
+  // --- Últimas 50 preguntas (continúan) ---
+  { q: "¿Cuál es el título de una de sus canciones más vistas en YouTube (además de \"Loca Enamorada\")?", opts:["Mi Mejor Amiga","Vístete","Lo Tengo Todo","Ya no hay más"], correctIndex:0 },
+  { q: "¿Cuál de los siguientes es un libro de su saga Una familia anormal?", opts:["Y unas vacaciones muy extrañas","El Secreto de la Biblioteca","El Misterio de la Escuela","El Viaje al Pasado"], correctIndex:0 },
+  { q: "¿Cuál de los siguientes personajes es un gato de Lyna?", opts:["Limón","Mandarina","Mila","Pato"], correctIndex:2 },
+  { q: "¿Qué evento de YouTube de 2017 incluyó a Lyna en su recopilación anual?", opts:["YouTube Games Week","YouTube Rewind","YouTube FanFest","YouTube Creator Day"], correctIndex:1 },
+  { q: "¿En qué área de la casa se desarrolla el primer libro de Una familia anormal?", opts:["En el jardín","En la casa de la abuela Rita","En la escuela","En el centro comercial"], correctIndex:1 },
+  { q: "¿Qué tipo de vídeos realiza en Roblox en los que interactúa con otros personajes y sigue una historia?", opts:["Speedruns","Roleplays","Unboxings","Noticias"], correctIndex:1 },
+  { q: "¿Cuál fue uno de los temas que Lyna abordó en su Roast Yourself Challenge?", opts:["Su carrera de escritora","Las críticas sobre su contenido y su edad","Su vida en España","Su amor por el anime"], correctIndex:1 },
+  { q: "¿Cuál es el nombre de uno de sus gatos que es de color negro?", opts:["Pulí","Umi","Mora","Limón"], correctIndex:2 },
+  { q: "¿Cuál de los siguientes es un título de la saga Una familia anormal publicado más recientemente (en 2023)?", opts:["El Misterio de la Hechicera","Y la capa superpoderosa","En busca del tesoro de Minuca","Y el cruce de los universos"], correctIndex:1 },
+  { q: "¿En qué lugar de Argentina se realizaron algunas de sus presentaciones teatrales del Show Lyniel?", opts:["Teatro Colón","Gran Rex","Estadio River Plate","Teatro San Martín"], correctIndex:1 },
+  { q: "¿Qué nombre de canal tenía Lyna antes de renombrarlo a Lyna Vallejos para su contenido personal?", opts:["Lynita","Lyna Vlogs","Lyna Life","Evelyn Vlogs"], correctIndex:1 },
+  { q: "¿Cuál es el nombre de su mamá, que a veces aparece en sus videos?", opts:["Patricia","Elizabeth","Claudia","Mariana"], correctIndex:1 },
+  { q: "¿Qué tipo de premios ha ganado Lyna a lo largo de su carrera?", opts:["Premios Oscar","Premios Nobel","Martín Fierro Digital (y Kids' Choice Awards)","Premios Gardel"], correctIndex:2 },
+  { q: "En el universo Una familia anormal, ¿quién es la \"Hechicera\"?", opts:["Melina","La Abuela Rita","Un personaje mágico que encuentran","Una versión malvada de Lyna"], correctIndex:2 },
+  { q: "¿Cuál es el nombre de una de sus canciones que habla sobre el divorcio (en tono de humor o roleplay)?", opts:["Me Enamoré","Tú y Yo","Quiero el Divorcio","Felices para Siempre"], correctIndex:2 },
+  { q: "¿Qué tema es el eje central de su libro El Cruce de los Universos?", opts:["Viajes en el tiempo","Universos paralelos y dimensiones","La búsqueda de un tesoro","Unas vacaciones familiares"], correctIndex:1 },
+  { q: "¿En qué juego de Roblox ha creado su propia versión de Brookhaven o Adopt Me?", opts:["En un servidor privado o juego propio de Roblox","En Fornite","En Los Sims 4","En Minecraft"], correctIndex:0 },
+  { q: "¿Cuál es el color de pelo natural de Lyna (antes de teñirse de rubio)?", opts:["Rojo","Negro","Castaño oscuro","Naranja"], correctIndex:2 },
+  { q: "¿Con qué otro youtuber (además de Dani) ha realizado Lyna un Roast Yourself Challenge conjunto?", opts:["Fernanfloo","El Rubius","No realizó otro conjunto, solo el \"Roast Yourself Lyniel\" con Dani","Willyrex"], correctIndex:2 },
+  { q: "¿Cuál es el nombre de uno de sus gatos que es conocido por su pelaje claro y su personalidad tranquila?", opts:["Mora","Umi","Pulí","Limón"], correctIndex:0 },
+  { q: "¿Qué libro de su saga incluye una búsqueda de un tesoro familiar?", opts:["Y unas vacaciones muy extrañas","En busca del tesoro de Minuca","Y la capa superpoderosa","El misterio de la hechicera"], correctIndex:1 },
+  { q: "¿Cuál fue uno de los videojuegos que Lyna consideró su favorito antes de que Roblox se volviera su contenido principal?", opts:["Mario Kart","The Legend of Zelda","Los Sims","Pokémon"], correctIndex:2 },
+  { q: "¿Qué popular juego de Roblox, centrado en roleplay y construcción, Lyna ha jugado para contar historias de su familia?", opts:["Phantom Forces","Arsenal","Brookhaven","Tower of Hell"], correctIndex:2 },
+  { q: "¿A qué se refiere Lyna con el término \"Team Anormal\" o \"Familia Anormal\"?", opts:["A sus suscriptores más leales","A su grupo de amigos youtubers","A ella, Dani, Melina, la Abuela Rita y otros personajes de sus libros","A los personajes de Minecraft"], correctIndex:2 },
+  { q: "¿Qué elemento mágico es el centro de la trama en el libro Y la capa superpoderosa?", opts:["Un anillo","Un cetro","Una capa","Una poción"], correctIndex:2 },
+  { q: "¿Qué red social utiliza principalmente Lyna para compartir momentos de su vida diaria con videos cortos?", opts:["Twitter (X)","TikTok","Facebook","Pinterest"], correctIndex:1 },
+  { q: "¿Qué temática suele ser el centro de las series de roleplay que hace Lyna en Minecraft?", opts:["Supervivencia hardcore","Historias de la escuela o la ciudad","Construcción de monumentos","Competencias de PVP"], correctIndex:1 },
+  { q: "¿Cuál de los siguientes es un libro de actividades de Lyna?", opts:["Una familia anormal. En busca del tesoro de Minuca","Busca y Encuentra con Lyna","El Diario de la Abuela Rita","El Gran Viaje de Lyniel"], correctIndex:0 },
+  { q: "¿Qué tipo de contenido incluye a menudo el canal \"Lyniel\" de Lyna y Dani?", opts:["Noticias de videojuegos","Vlogs y retos de pareja","Tutoriales de programación","Críticas de música"], correctIndex:1 },
+  { q: "¿Cuál de las siguientes canciones fue lanzada en el canal de Lyna Music?", opts:["Desafío","Aventuras","Brillaré","Volar"], correctIndex:2 },
+  { q: "¿Qué animal es el peluche \"Señor Pato\"?", opts:["Un conejo","Un oso","Un pato","Un perro"], correctIndex:2 },
+  { q: "¿En qué plataforma de contenido Lyna tiene un canal dedicado a música?", opts:["Spotify","Apple Music","YouTube (Lyna Music)","SoundCloud"], correctIndex:2 },
+  { q: "¿Cuál es el nombre de uno de los juegos de la saga 99 Noches en la Bosque que Lyna ha jugado en Roblox?", opts:["99 Días en la Ciudad","99 Noches en la Bosque","99 Horas en la Casa","99 Semanas en el Mar"], correctIndex:1 },
+  { q: "¿Cuál es el nombre de su madre en el universo de Una familia anormal?", opts:["Lina","Melina","No se le da un nombre recurrente, se centra en Rita, Lina y Meli","Elizabeth"], correctIndex:2 },
+  { q: "¿En qué evento cultural importante en Argentina ha participado Lyna para firmar libros?", opts:["BAFICI","Feria de Tecnópolis","Feria Internacional del Libro de Buenos Aires","Cosquín Rock"], correctIndex:2 },
+  { q: "¿Qué personaje recurrente en sus videos de Roblox se caracteriza por ser un panadero?", opts:["Dani","Melina","Dani Morro (a veces llamado \"Daniel Panadero\")","Chocoblox"], correctIndex:2 },
+  { q: "¿Qué tipo de vídeos de temática cómica solía hacer Lyna al principio de su canal, antes del auge del gaming?", opts:["Bromas telefónicas","Sketches de comedia","Imitaciones de famosos","Retos extremos"], correctIndex:1 },
+  { q: "¿Qué nombre le dio Lyna a uno de sus gatos, que también es el nombre de una fruta?", opts:["Piña","Fresa","Limón","Melón"], correctIndex:2 },
+  { q: "¿Qué profesión tiene Dani Morro, además de ser youtuber?", opts:["Músico","Programador web","Chef","Periodista"], correctIndex:0 },
+  { q: "¿Cuál de estos NO es un género musical que Lyna Vallejos haya interpretado?", opts:["Pop","Rap (en el Roast Yourself)","Reggaeton","Balada pop"], correctIndex:2 },
+  { q: "¿Cuál es el propósito del libro El diario de la abuela Rita?", opts:["Un cómic de aventuras","Un libro de cocina","Un diario íntimo con secretos y anécdotas de Rita","Un libro de consejos de jardinería"], correctIndex:2 },
+  { q: "¿Qué edad tenía Lyna aproximadamente cuando sus padres se divorciaron, según entrevistas?", opts:["5 años","12 años","18 años","25 años"], correctIndex:1 },
+  { q: "¿Qué significa el término \"Brainrot\" que Lyna ha popularizado en sus videos recientes de Roblox?", opts:["Juegos de inteligencia","Contenido absurdo o viral que se vuelve adictivo","Tutoriales de programación","Errores del juego"], correctIndex:1 },
+  { q: "¿Qué tipo de contenido suele compartir Lyna en su canal secundario de Instagram, @lynagamingyt?", opts:["Vlogs de moda","Clips y momentos de sus gameplays","Retos de baile","Recetas de cocina"], correctIndex:1 },
+  { q: "¿Cuál es el nombre del primer libro de la saga Una familia anormal?", opts:["El Misterio de la Hechicera","En busca del tesoro de Minuca","Y el cruce de los universos","Y unas vacaciones muy extrañas"], correctIndex:1 },
+  { q: "¿Qué tipo de desafíos realiza con frecuencia en sus videos de Vlogs, como 24 horas o challenges virales?", opts:["Desafíos de levantamiento de pesas","Desafíos de 24 horas en un lugar o con una regla","Desafíos de lectura","Desafíos de ajedrez"], correctIndex:1 },
+  { q: "¿En qué tipo de plataforma de juegos Lyna ha realizado colaboraciones en vivo (streams)?", opts:["Twitch","Facebook Gaming","YouTube (streams en vivo)","Mixer"], correctIndex:2 },
+  { q: "¿Cuál es un apodo común que sus fans le dan a Lyna (diminutivo de su nombre artístico)?", opts:["Lani","Linita","Lynu","Ly"], correctIndex:1 },
+  { q: "¿En qué juego Lyna ha construido grandes casas y mansiones para sus roleplays?", opts:["Tetris","Among Us","Minecraft y Los Sims","Candy Crush"], correctIndex:2 },
+  { q: "¿Cuál es un tema recurrente en los roleplays de Adopt Me! que Lyna ha creado?", opts:["Viajes espaciales","Historias de adopción de bebés y mascotas","Carreras de autos","Competencias de baile"], correctIndex:1 }
+];
+
+// Aseguramos que tenemos 100 preguntas (si tu lista tuviera menos, se repiten)
+while (questions.length < 100) {
+  // Añadimos copias de preguntas finales si faltan (no ideal, pero asegura flujo)
+  questions.push(JSON.parse(JSON.stringify(questions[questions.length-1])));
+}
+
+// ===============================
+// Estado del juego
+// ===============================
+let state = {
+  lives: 10,
+  totalLives: 10,
+  currentIndex: 0,
+  shuffledOrder: null,
+  selectedOption: null,
+  playing: false
+};
+
+// Mezclar orden de preguntas para variedad
+function shuffleQuestionOrder() {
+  const arr = Array.from({length:questions.length}, (_,i)=>i);
+  for (let i=arr.length-1;i>0;i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+// UI refs
+const coverArea = document.getElementById('coverArea');
+const lifeInner = document.getElementById('lifeInner');
+const lifeCount = document.getElementById('livesCount');
+const startBtn = document.getElementById('startBtn');
+const editBtn = document.getElementById('editBtn');
+const gameArea = document.getElementById('gameArea');
+const qText = document.getElementById('qText');
+const optionsDiv = document.getElementById('options');
+const qImage = document.getElementById('qImage').querySelector('img');
+const progress = document.getElementById('progress');
+const submitBtn = document.getElementById('submitBtn');
+const nextBtn = document.getElementById('nextBtn');
+const feedback = document.getElementById('feedback');
+const result = document.getElementById('result');
+const resultTitle = document.getElementById('resultTitle');
+const resultMsg = document.getElementById('resultMsg');
+const retryBtn = document.getElementById('retryBtn');
+const exitBtn = document.getElementById('exitBtn');
+const editArea = document.getElementById('editArea');
+const editQuestionSelect = document.getElementById('editQuestionSelect');
+const editCorrectSelect = document.getElementById('editCorrectSelect');
+const saveCorrectBtn = document.getElementById('saveCorrectBtn');
+const closeEditBtn = document.getElementById('closeEditBtn');
+
+// Inicializar portada (imagen aleatoria)
+function initCover() {
+  const idx = Math.floor(Math.random()*images.length);
+  coverArea.innerHTML = '<img src="'+images[idx]+'" alt="Portada" />';
+  // mensaje pequeño debajo
+  const p = document.createElement('div');
+  p.style.marginTop='8px';
+  p.style.fontSize='13px';
+  p.style.color='#e9e2ff';
+  p.textContent = "Portada elegida al azar. Presiona 'Iniciar juego' para comenzar.";
+  coverArea.appendChild(p);
+}
+
+// Actualizar barra de vida
+function updateLifeUI() {
+  const pct = Math.max(0, (state.lives / state.totalLives) * 100);
+  lifeInner.style.width = pct + "%";
+  lifeInner.textContent = state.lives + " / " + state.totalLives;
+  lifeCount.textContent = state.lives;
+}
+
+// Render pregunta actual
+function renderQuestion() {
+  const qIdx = state.shuffledOrder[state.currentIndex];
+  const qObj = questions[qIdx];
+  qText.textContent = qObj.q;
+  optionsDiv.innerHTML = '';
+  qObj.opts.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.dataset.idx = i;
+    div.innerHTML = `<strong>${String.fromCharCode(97+i)})</strong> ${opt}`;
+    div.addEventListener('click', ()=> {
+      document.querySelectorAll('.opt').forEach(el => el.classList.remove('selected'));
+      div.classList.add('selected');
+      state.selectedOption = i;
+    });
+    optionsDiv.appendChild(div);
+  });
+  // Imagen aleatoria por pregunta
+  const imgIdx = Math.floor(Math.random()*images.length);
+  qImage.src = images[imgIdx];
+  // progreso
+  progress.textContent = `Pregunta ${state.currentIndex+1} / ${questions.length}`;
+  feedback.innerHTML = '';
+  submitBtn.style.display = '';
+  nextBtn.style.display = 'none';
+  state.selectedOption = null;
+}
+
+// Enviar respuesta
+function submitAnswer() {
+  const qIdx = state.shuffledOrder[state.currentIndex];
+  const qObj = questions[qIdx];
+  if (state.selectedOption === null) {
+    feedback.innerHTML = `<div class="wrong">Selecciona una opción antes de enviar.</div>`;
+    return;
+  }
+  // comprobar
+  if (state.selectedOption === qObj.correctIndex) {
+    feedback.innerHTML = `<div class="correct">¡Correcto! Hola, soy Lyna 👋</div>`;
+  } else {
+    state.lives -= 1;
+    updateLifeUI();
+    feedback.innerHTML = `<div class="wrong">Incorrecto. -1 vida.</div>`;
+  }
+  // bloquear submit y mostrar siguiente o finalizar
+  submitBtn.style.display = 'none';
+  nextBtn.style.display = '';
+  // si se acabaron las vidas -> Game Over
+  if (state.lives <= 0) {
+    showResult(false);
+  }
+}
+
+// Siguiente pregunta
+function nextQuestion() {
+  state.currentIndex++;
+  if (state.currentIndex >= questions.length) {
+    showResult(true);
+    return;
+  }
+  renderQuestion();
+}
+
+// Mostrar resultado final
+function showResult(won) {
+  result.style.display = 'flex';
+  if (won) {
+    resultTitle.textContent = "¡Felicidades!";
+    resultMsg.textContent = "Completaste todas las preguntas.";
+  } else {
+    resultTitle.textContent = "GAME OVER";
+    resultMsg.textContent = "Te quedaste sin vidas.";
+  }
+}
+
+// Reiniciar juego
+function resetGame() {
+  state.lives = state.totalLives;
+  state.currentIndex = 0;
+  state.shuffledOrder = shuffleQuestionOrder();
+  state.playing = true;
+  updateLifeUI();
+  renderQuestion();
+  gameArea.style.display = '';
+  document.getElementById('coverArea').style.display = 'none';
+  result.style.display = 'none';
+}
+
+// Event listeners
+startBtn.addEventListener('click', ()=> {
+  // iniciar
+  if (!state.playing) {
+    resetGame();
+  }
+});
+submitBtn.addEventListener('click', submitAnswer);
+nextBtn.addEventListener('click', ()=> {
+  if (state.lives <= 0) {
+    showResult(false);
+  } else {
+    nextQuestion();
+  }
+});
+retryBtn.addEventListener('click', ()=>{
+  // reiniciar y cerrar panel
+  result.style.display = 'none';
+  resetGame();
+});
+exitBtn.addEventListener('click', ()=>{
+  result.style.display = 'none';
+  document.getElementById('coverArea').style.display = '';
+  gameArea.style.display = 'none';
+  state.playing = false;
+});
+
+// Edición de respuestas
+editBtn.addEventListener('click', ()=>{
+  editArea.style.display = editArea.style.display === 'none' ? '' : 'none';
+  populateEditSelects();
+});
+closeEditBtn.addEventListener('click', ()=>{
+  editArea.style.display = 'none';
+});
+function populateEditSelects() {
+  editQuestionSelect.innerHTML = '';
+  for (let i=0;i<questions.length;i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `${i+1}. ${questions[i].q.slice(0,60)}${questions[i].q.length>60?'...':''}`;
+    editQuestionSelect.appendChild(opt);
+  }
+  // setear por primera pregunta
+  editQuestionSelect.value = 0;
+  editCorrectSelect.value = questions[0].correctIndex ?? 0;
+}
+editQuestionSelect.addEventListener('change', ()=>{
+  const idx = parseInt(editQuestionSelect.value,10);
+  editCorrectSelect.value = questions[idx].correctIndex ?? 0;
+});
+saveCorrectBtn.addEventListener('click', ()=>{
+  const qIdx = parseInt(editQuestionSelect.value,10);
+  const corr = parseInt(editCorrectSelect.value,10);
+  questions[qIdx].correctIndex = corr;
+  saveCorrectBtn.textContent = 'Guardado ✓';
+  setTimeout(()=> saveCorrectBtn.textContent = 'Guardar', 900);
+});
+
+// Inicializar UI
+initCover();
+updateLifeUI();
+populateEditSelects();
+
+</script>
+</body>
+</html>
